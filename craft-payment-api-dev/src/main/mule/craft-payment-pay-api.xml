@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+  xmlns:email="http://www.mulesoft.org/schema/mule/email"
+  xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<flow name="PaymentFlow" doc:id="99bdf65a-59f3-4328-98c1-92b084da9968" >
+    <http:listener doc:name="Listener" doc:id="7ebd43fb-770f-4a72-887c-2d73123d9820" config-ref="HTTP_Listener_Pay_port2" path="/payapi" allowedMethods="POST"/>
+    <logger level="INFO" doc:name="Logger" doc:id="fcef8eb2-71bb-4bb5-9fc6-ba4dc9f16c10" message="flow started" />
+    <ee:transform doc:name="Transform Message" doc:id="868cc197-812e-43f8-bc09-80b8924aedfe" >
+      <ee:message >
+      </ee:message>
+      <ee:variables >
+        <ee:set-variable variableName="pname" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.pname
+]]></ee:set-variable>
+        <ee:set-variable variableName="price" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.price as Number]]></ee:set-variable>
+        <ee:set-variable variableName="user_id" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.uid as Number]]></ee:set-variable>
+      </ee:variables>
+    </ee:transform>
+    <db:select doc:name="payment_info" doc:id="33481a2f-5a67-43c9-990e-92b73e891e08" config-ref="Database_Config_All_in_One">
+      <db:sql><![CDATA[select * from payment_info where user_id= :userId]]></db:sql>
+      <db:input-parameters ><![CDATA[#[{
+  userId: attributes.queryParams.uid as Number
+}]]]></db:input-parameters>
+    </db:select>
+    <ee:transform doc:name="Transform Message" doc:id="f809678d-8962-41a5-8da4-690aa1e54594" >
+      <ee:message >
+        <ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var dataVal = payload map{
+  amount: $.amount,
+  uId: $.user_id
+  
+}
+---
+{
+  (dataVal)
+}]]></ee:set-payload>
+      </ee:message>
+    </ee:transform>
+    <choice doc:name="Choice" doc:id="995e5f7c-949c-496f-b65f-c29a4fea0350" >
+      <when expression="#[payload.amount &gt; vars.price]">
+        <db:insert doc:name="Insert" doc:id="7a48f567-6d5a-4ae3-a6da-e1cb9723645c" config-ref="Database_Config_All_in_One" target="sqs1">
+      <db:sql><![CDATA[insert into log_data(user_id,product_id,remaining_amount,paid_amount) values (:uid,:pname,:ramount,:pamount)]]></db:sql>
+          <db:parameter-types />
+          <db:input-parameters ><![CDATA[#[{
+  uid: payload.uId,
+  pname: vars.pname,
+  ramount: payload.amount - vars.price,
+  pamount: vars.price
+}]]]></db:input-parameters>
+          <db:auto-generated-keys-column-indexes />
+    </db:insert>
+        <ee:transform doc:name="Transform Message" doc:id="b90e6151-91c3-4a90-b07c-746276baa558">
+          <ee:message>
+            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+          </ee:message>
+        </ee:transform>
+        <db:update doc:name="Update" doc:id="1545826c-4d56-4483-a986-b710f51c589b" config-ref="Database_Config_All_in_One">
+      <db:sql><![CDATA[update payment_info set amount= :a where user_id = :userId]]></db:sql>
+      <db:input-parameters><![CDATA[#[{
+  a: payload.amount - vars.price,
+  userId: vars.user_id
+}]]]></db:input-parameters>
+    </db:update>
+        <ee:transform doc:name="Transform Message" doc:id="fb394fab-e01d-4402-ad14-7a39ec8a3806" >
+          <ee:message >
+            <ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "you paid successfully"
+}]]></ee:set-payload>
+          </ee:message>
+        </ee:transform>
+      </when>
+      <otherwise >
+        <ee:transform doc:name="Transform Message" doc:id="651dda00-c942-4fec-9622-7068037b87f2" >
+          <ee:message >
+            <ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "your balance is insufficient"
+}]]></ee:set-payload>
+          </ee:message>
+        </ee:transform>
+      </otherwise>
+    </choice>
+  </flow>
+  <flow name="Register-User" doc:id="a4556494-0ab5-4782-966c-9f830dbf243b" >
+    <http:listener doc:name="Listener" doc:id="2a477ae7-0068-4e47-ba78-be72a5a6eaa0" config-ref="HTTP_Listener_Register_port1" path="/regapi" allowedMethods="POST"/>
+    <ee:transform doc:name="Transform Message" doc:id="44b174ab-ff49-4fa8-9764-52d27c4d76fb" >
+      <ee:message >
+      </ee:message>
+      <ee:variables >
+        <ee:set-variable variableName="email" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.email]]></ee:set-variable>
+        <ee:set-variable variableName="card_no" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.card_no]]></ee:set-variable>
+				<ee:set-variable variableName="amount" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.amount]]></ee:set-variable>
+				<ee:set-variable variableName="password" ><![CDATA[%dw 2.0
+output application/java
+---
+
+payload.password]]></ee:set-variable>
+      
+</ee:variables>
+    </ee:transform>
+    <db:insert doc:name="Insert" doc:id="76b5a23b-5e3e-47a4-ac06-0f0d0ad3938c" config-ref="Database_Config_All_in_One" target="sqs">
+      <db:sql ><![CDATA[insert into user_info(email, card_no,password) values(:email, :card_no, :password)]]></db:sql>
+      <db:input-parameters ><![CDATA[#[{
+  email: vars.email,
+  card_no:vars.card_no,
+  password: vars.password
+  
+}]]]></db:input-parameters>
+      <db:auto-generated-keys-column-indexes />
+    </db:insert>
+    <db:select doc:name="Select" doc:id="4a2f79cd-fd05-4582-b6bb-a28fc2b6d0cc" config-ref="Database_Config_All_in_One">
+      <db:sql ><![CDATA[select * from user_info where email= :a]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+   a: vars.email
+}]]]></db:input-parameters>
+    
+</db:select>
+    <ee:transform doc:name="Transform Message" doc:id="8c292117-9dbd-492f-871b-e189c544cbb2" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="id" ><![CDATA[%dw 2.0
+output application/java
+---
+payload[0].id]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:insert doc:name="Insert" doc:id="26c00a45-1e4d-43ea-aea6-46a726c0b004" config-ref="Database_Config_All_in_One">
+      <db:sql><![CDATA[insert into payment_info(amount,user_id) values (:amount,:user_id)]]></db:sql>
+      <db:input-parameters><![CDATA[#[{
+  amount:vars.amount,
+  user_id: vars.id
+  
+}]]]></db:input-parameters>
+    </db:insert>
+    <email:send doc:name="Send" doc:id="e99eb928-b952-4c98-ab49-15febcc4afa7" config-ref="Email_SMTP_For_Reg" fromAddress="amir2mohammed12@gmail.com" subject='#["mail from craft"]'>
+      <email:to-addresses>
+        <email:to-address value="#[vars.email]" />
+      </email:to-addresses>
+      <email:body contentType="text/plain">
+        <email:content><![CDATA[#[vars.card_no]]]></email:content>
+      </email:body>
+    </email:send>
+		<ee:transform doc:name="Transform Message" doc:id="e85ba86b-a765-4fa6-9be8-1ccfb01a68b5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"msg": "You Register Successfully!"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+  
+</flow>
+
+</mule>

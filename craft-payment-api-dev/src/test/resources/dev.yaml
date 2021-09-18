@@ -1,0 +1,9 @@
+http:
+      port: "8083"
+      port1: "8086"
+db: 
+      port: "3306"
+      host: "db.icraftsoft.net"
+      username: "cmiki"
+      password: "CmikiP@ss"
+      database: "craft_payment"

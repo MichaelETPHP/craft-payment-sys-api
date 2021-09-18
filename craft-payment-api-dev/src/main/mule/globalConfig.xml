@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	
+	 
+  
+  
+    <db:config name="Database_Config_All_in_One" doc:name="Database Config" doc:id="9e0e1dd9-83ec-4063-a1b4-20821efbdee6" >
+    <db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.username}" password="${db.password}" database="${db.database}"/>
+  </db:config>
+  
+  
+    <email:smtp-config name="Email_SMTP_For_Reg" doc:name="Email SMTP" doc:id="d9970fab-2ded-4bff-9ad5-e68b410d3101" >
+    <email:smtp-connection host="smtp.gmail.com" user="amir2mohammed12@gmail.com" password="CraftSoftware@2021" >
+      <email:properties >
+        <email:property key="mail.smtp.starttls.enable" value="true" />
+      </email:properties>
+    </email:smtp-connection>
+  </email:smtp-config>
+  
+  
+  <configuration-properties doc:name="Configuration properties" doc:id="60101499-dacb-49d7-b070-dc9db795d3b3" file="dev.yaml" doc:description="Config File"/>
+	
+	 <http:listener-config name="HTTP_Listener_Register_port1" doc:name="HTTP Listener config" doc:id="55e9ca34-1e0d-41b3-a24b-ff1cb0249237" doc:description="Register User to our System">
+    <http:listener-connection host="0.0.0.0" port="${http.port1}" />
+  </http:listener-config>
+  
+	<http:listener-config name="HTTP_Listener_Pay_port2" doc:name="HTTP Listener config" doc:id="68ae3c2f-c33c-4fab-8a3d-8b758a859ec4" doc:description="Pay using System">
+		<http:listener-connection host="0.0.0.0" port="${http.port2}" />
+	</http:listener-config>
+	
+	<http:listener-config name="HTTP_Listener_login_port3" doc:name="HTTP Listener config" doc:id="8e5affa8-7c3b-440b-970a-bdd00c5a8d82" doc:description="Login to our System">
+		<http:listener-connection host="0.0.0.0" port="${http.port3}" />
+	</http:listener-config>
+	
+	
+</mule>
