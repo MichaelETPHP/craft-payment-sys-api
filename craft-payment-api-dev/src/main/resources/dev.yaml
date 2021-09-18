@@ -1,7 +1,7 @@
 http:
-      port1: "8085"
-      port2: "8086"
-      port3: "8087"
+      port1: "8185"
+      port2: "8186"
+      port3: "8187"
 db: 
       port: "3306"
       host: "db.icraftsoft.net"
