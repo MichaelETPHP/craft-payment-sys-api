@@ -179,7 +179,7 @@ payload[0].id]]></ee:set-variable>
 output application/json
 ---
 {
-	"msg": "You Register Successfully!"
+	"Msg": "You Register Successfully!"
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
