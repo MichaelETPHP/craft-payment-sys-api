@@ -13,27 +13,29 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
     <logger level="INFO" doc:name="Logger" doc:id="fcef8eb2-71bb-4bb5-9fc6-ba4dc9f16c10" message="flow started" />
     <ee:transform doc:name="Transform Message" doc:id="868cc197-812e-43f8-bc09-80b8924aedfe" >
       <ee:message >
+
       </ee:message>
       <ee:variables >
         <ee:set-variable variableName="pname" ><![CDATA[%dw 2.0
 output application/java
 ---
-attributes.queryParams.pname
+payload.pname
 ]]></ee:set-variable>
         <ee:set-variable variableName="price" ><![CDATA[%dw 2.0
 output application/java
 ---
-attributes.queryParams.price as Number]]></ee:set-variable>
+payload.price as Number]]></ee:set-variable>
         <ee:set-variable variableName="user_id" ><![CDATA[%dw 2.0
 output application/java
 ---
-attributes.queryParams.uid as Number]]></ee:set-variable>
+
+payload.uid as Number]]></ee:set-variable>
       </ee:variables>
     </ee:transform>
     <db:select doc:name="payment_info" doc:id="33481a2f-5a67-43c9-990e-92b73e891e08" config-ref="Database_Config_All_in_One">
       <db:sql><![CDATA[select * from payment_info where user_id= :userId]]></db:sql>
       <db:input-parameters ><![CDATA[#[{
-  userId: attributes.queryParams.uid as Number
+  userId: vars.user_id as Number
 }]]]></db:input-parameters>
     </db:select>
     <ee:transform doc:name="Transform Message" doc:id="f809678d-8962-41a5-8da4-690aa1e54594" >
