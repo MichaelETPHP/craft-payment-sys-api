@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	
+	<flow name="Register-UserFlow" doc:id="c6560f05-b517-41c7-9a5b-faa5cb336fed" >
+    <http:listener doc:name="Listener" doc:id="7cbeed05-f76b-49a1-befd-ab54e59d4adb" config-ref="HTTP_Listener_Register_port1" path="/regapi" allowedMethods="POST"/>
+    <ee:transform doc:name="Transform Message" doc:id="5e2d558b-b6f3-4ff9-ab97-bb67910b4dce" >
+      <ee:message >
+      </ee:message>
+      <ee:variables >
+        <ee:set-variable variableName="email" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.email]]></ee:set-variable>
+        <ee:set-variable variableName="card_no" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.card_no]]></ee:set-variable>
+				<ee:set-variable variableName="amount" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.amount]]></ee:set-variable>
+				<ee:set-variable variableName="password" ><![CDATA[%dw 2.0
+output application/java
+---
+
+payload.password]]></ee:set-variable>
+      
+</ee:variables>
+    </ee:transform>
+    <db:insert doc:name="Insert" doc:id="1c0ef855-c466-41eb-9e89-6ac8c885a387" config-ref="Database_Config_All_in_One" target="sqs">
+      <db:sql ><![CDATA[insert into user_info(email, card_no,password) values(:email, :card_no, :password)]]></db:sql>
+      <db:input-parameters ><![CDATA[#[{
+  email: vars.email,
+  card_no:vars.card_no,
+  password: vars.password
+  
+}]]]></db:input-parameters>
+      <db:auto-generated-keys-column-indexes />
+    </db:insert>
+    <db:select doc:name="Select" doc:id="b91ac25a-7a48-4db0-9fa7-be5852712ce4" config-ref="Database_Config_All_in_One">
+      <db:sql ><![CDATA[select * from user_info where email= :a]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+   a: vars.email
+}]]]></db:input-parameters>
+    
+</db:select>
+    <ee:transform doc:name="Transform Message" doc:id="d84bacf8-7d50-436a-a620-bf77a7f35a42" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="id" ><![CDATA[%dw 2.0
+output application/java
+---
+payload[0].id]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:insert doc:name="Insert" doc:id="17fbbb25-4afc-4a42-a023-0247b6fa1ef9" config-ref="Database_Config_All_in_One">
+      <db:sql><![CDATA[insert into payment_info(amount,user_id) values (:amount,:user_id)]]></db:sql>
+      <db:input-parameters><![CDATA[#[{
+  amount:vars.amount,
+  user_id: vars.id
+  
+}]]]></db:input-parameters>
+    </db:insert>
+    <email:send doc:name="Send" doc:id="b12f0485-19d3-4c04-9d4f-eca0266ca2e8" config-ref="Email_SMTP_For_Reg" fromAddress="amir2mohammed12@gmail.com" subject='#["mail from craft"]'>
+      <email:to-addresses>
+        <email:to-address value="#[vars.email]" />
+      </email:to-addresses>
+      <email:body contentType="text/plain">
+        <email:content><![CDATA[#[vars.card_no]]]></email:content>
+      </email:body>
+    </email:send>
+		<ee:transform doc:name="Transform Message" doc:id="c3f559ae-46cd-49a9-9ee6-2b534a0f4e0c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Msg": "You Register Successfully!"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+  
+</flow>
+	</mule>
